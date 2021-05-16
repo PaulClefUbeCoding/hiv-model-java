@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.lang.Math;
 
 import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -25,10 +26,11 @@ class Person {
     private double condomUse;  //The chance a person uses protection (percent by 10%s)
     private double testFrequency; //Number of times a person will get tested per year (single digit)
     private Person partner; //The person that is the partner in a couple
+    private int biologicalSex; //0 for male, 1 for female.
 
      /*Constructor that initializes Person's properties*/
      public Person(boolean infected, boolean known, int infectionLength, boolean couple, int coupleLength, 
-     int commitment, int couplingTendency, int condomUse, int testFrequency) {
+     int commitment, int couplingTendency, int condomUse, int testFrequency, int biologicalSex) {
          this.infected = infected;
          this.known = known;
          this.infectionLength = infectionLength;
@@ -38,6 +40,7 @@ class Person {
          this.couplingTendency = (double)couplingTendency*.1;
          this.condomUse = (double)condomUse*.1;
          this.testFrequency = testFrequency;
+         this.biologicalSex = biologicalSex;
      }
     
      /*Getter and setter for the Person variables*/
@@ -133,8 +136,17 @@ public class HIVBoard extends JPanel implements ActionListener {
     //Global variables
     double infectionChance; //Percent chance that an infected person will pass on infection duriong one week of couplehood
     int symptonsShow; //How long (in weeks) a person will be infected before symptoms occur which may cause the person to get tested
+    int week; //the current week
 
-    Person[] population; //Contains the initial amount of people
+    //Green = Not Infected, Blue = Infected (Not Known), Red = Infected and Knows
+    int red;
+    int green;
+    int blue;
+
+    ArrayList<Person> population; //Contains the initial amount of people
+
+    JFrame frame = new JFrame("HIV Model in Java");
+
     JPanel panel1 = new JPanel();
     JPanel panel2 = new JPanel();
     JPanel panel3 = new JPanel();
@@ -148,11 +160,19 @@ public class HIVBoard extends JPanel implements ActionListener {
     public HIVBoard() {
         this.infectionChance = 0.5; //unprotected sex with an infected partner, you have a 50% chance of being infected
         this.symptonsShow = 200; //symptoms show up 200 weeks after being infected
+        this.week = 0;
+        this.red = 0;
+        this.green = 0;
+        this.blue = 0;
 
         setupBoard();
     }
 
     public void setupBoard() {
+
+        this.frame.setSize(800,800);
+        this.frame.setLayout(new FlowLayout());
+
         this.panel1.setLayout(new GridLayout(5, 2));
         this.panel3.setLayout(new GridLayout(1, 3));
         //this.panel2.setLayout(new GridLayout(5, 0));
@@ -223,13 +243,14 @@ public class HIVBoard extends JPanel implements ActionListener {
         //Add Action Listeners to buttons when pressed
         buttonSetup.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                setup(initialPopulationSlider.getValue(), avgCouplingSlider.getValue(), avgCommitmentSlider.getValue(), avgCondomUseSilder.getValue(), avgTestFrequency.getValue());
+                System.out.println("Setup button is working!");
+                    setup(initialPopulationSlider.getValue(), avgCouplingSlider.getValue(), avgCommitmentSlider.getValue(), avgCondomUseSilder.getValue(), avgTestFrequency.getValue());
             }
         });
 
         buttonStep.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-
+                next();
             }
         });
 
@@ -252,13 +273,25 @@ public class HIVBoard extends JPanel implements ActionListener {
         this.panel1.add(avgTestFrequency);
         this.panel1.add(label5);
 
-        this.panel3.add(new JButton("Setup"));
-        this.panel3.add(new JButton("Step"));
-        this.panel3.add(new JButton("Go Auto"));
+        this.panel3.add(buttonSetup);
+        this.panel3.add(buttonStep);
+        this.panel3.add(buttonAuto);
 
         this.results.setEditable(false);
         //JScrollPane scrollPane = new JScrollPane(results);
         this.panel4.add(this.results);
+
+         frame.add(this.getPanel1());
+        frame.add(this.getPanel3());
+        frame.add(this.getPanel4());
+
+        
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.pack();
+
+        /*Make frame visible, disable resizing*/
+        frame.setVisible(true);
+        frame.setResizable(false);
 
 
     }
@@ -285,11 +318,17 @@ public class HIVBoard extends JPanel implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        
+        System.out.println("Over here");
     }
 
     public void setup(int people, int coupling, int commitment, int condom, int testing) {
+        System.out.println("Inside setup method. Creating people");
+        this.red = 0;
+        this.green = 0;
+        this.blue = 0;
+        this.week = 0;
         createPeople(people, coupling, commitment, condom, testing);
+        System.out.println("Done creating people");
         setupPrint();
     }
 
@@ -297,26 +336,186 @@ public class HIVBoard extends JPanel implements ActionListener {
     /*public Person(boolean infected, boolean known, int infectionLength, boolean couple, int coupleLength, 
      int commitment, double couplingTendency, int condomUse, int testFrequency)*/
     public void createPeople(int people, int coupling, int commitment, int condom, int testing) {
-        int initialInfected = (int)((double)people * 0.25); //2.5% of the people start out infected, but does not know they are. Rounded down.
+        System.out.println("Inside createPeople method");
+        int initialInfected = (int)((double)people * 0.025); //2.5% of the people start out infected, but does not know they are. Rounded down.
+        System.out.println("initial infected: " + initialInfected);
         int counter=0;
+
+        System.out.println((double)coupling*0.01);
+        
+        population = new ArrayList<Person>();
 
         for(int i = 0; i < people; i++) {
             if(counter <= initialInfected) {
-                population[i] = new Person(true, false, (int)((Math.random()*100)+1), false, 0, commitment, coupling, condom, testing);
+                population.add(new Person(true, false, (int)((Math.random()*100)+1), false, 0, commitment, coupling, condom, testing, (int)Math.round(Math.random())));
+                counter++;
             }
             else {
-                population[i] = new Person(false, false, 0, false, 0, commitment, coupling, condom, testing);
+                population.add(new Person(false, false, 0, false, 0, commitment, coupling, condom, testing, (int)Math.round(Math.random())));
             }
                 
         }
+        System.out.println("End of createPeople method");
     }
 
     public void setupPrint() {
-        this.results.append("Green = Not Infected, Blue = Infected (Not Known), Red = Infected and Knows\n");
+        this.results.append("Green = Not Infected, Blue = Infected (Not Known), Red = Infected and Knows\n\n");
+
+        //calculate starting population state
+        for(int i = 0; i < this.population.size(); i++) {
+            if(this.population.get(i).getInfected() && this.population.get(i).getKnown()) {
+                this.red++;
+            } else if(this.population.get(i).getInfected()) {
+                this.blue++;
+            } else {
+                this.green++;
+            }
+        }
+
+        this.results.append("---Week 0---\nGreen: " + green + "  Blue: " + blue + "  Red: " + red + "\n\n");
     }
 
-    public void nextPrint() {
+    public void next() {
+        ArrayList<Person> temp = new ArrayList<Person>();
+        int max = 0;
+        int min = 0;
+        int range = 0;
 
+        while(population.size() != 0) {
+            max = this.population.size();
+            range = max - min;
+            int random1 = 0;
+            int random2 = 0;
+
+            random1 = (int)Math.round(Math.random()*range); //gets a number from 0 to population max - 1
+            Person x = population.get(random1); //random person 1
+
+            //if random person 1 is in a relationship
+            if(x.getCouple() == true) { 
+                Person y = x.getPartner();
+                areTheyInHeat(x,y);
+                temp.add(x);
+                temp.add(y);
+                this.population.remove(random1);
+                this.population.remove(this.population.indexOf((this.population.get(random1).getPartner())));
+
+            //If random person 1 is not in a relationship
+            } else { 
+
+                //If there's more than 1 person left, find a second person
+                if(population.size() > 1) {
+                    random2 = (int)Math.round(Math.random()*range);
+                    Person m = population.get(random2);
+
+                    boolean chanceCouple1 = false; //default false for random person 1
+                    boolean chanceCouple2 = false; //default false for random person 2
+                    if(m.getCouple() == false) { //if random person 2 is not in a couple
+
+                        //Random 1-100, if the number is greater than couple tendency in int then no couple
+                        if((int)(x.getCouplingTendency()*10) < (int)Math.round((Math.random() * 100)+1)) { 
+                            chanceCouple1 = false;
+                        } else {
+                            chanceCouple1 = true;
+                        }
+
+                        //Random 1-100, if the number is greater than couple tendency in int then no couple
+                        if((int)(m.getCouplingTendency()*10) < (int)Math.round((Math.random() * 100)+1)) {
+                            chanceCouple2 = false;
+                        }
+                        else {
+                            chanceCouple2 = true;
+                        }
+
+                        //They become a couple and start their couple length
+                        if(chanceCouple1 && chanceCouple2) {
+                            x.setCouple(true); //now a couple
+                            m.setCouple(true);
+                            x.setCoupleLength(0); //starting couple commitment to 0 week
+                            m.setCoupleLength(0);
+                            areTheyInHeat(x, m);
+                            temp.add(x);
+                            temp.add(m);
+                            this.population.remove(random1);
+                            this.population.remove(random2);
+                        } else {
+                            temp.add(x);
+                            temp.add(m);
+                            this.population.remove(random1);
+                            this.population.remove(random2);
+                        }
+                    } else {
+                        temp.add(x);
+                        temp.add(m);
+                        this.population.remove(random1);
+                        this.population.remove(random2);
+                    }
+                
+                //If random person 1 is the only one left 
+                } else {
+                    temp.add(x);
+                    this.population.remove(random1);
+                }
+            }
+
+            
+            max--;
+        }
+
+        nextPrint();
+    }
+
+    public void areTheyInHeat(Person x, Person y) {
+        boolean chanceSex1 = false; //default false for random person 1
+        boolean chanceSex2 = false; //default false for random person 2
+
+        if((int)(x.getCouplingTendency()*10) < (int)Math.round((Math.random() * 100)+1)) { //Random 1-100, if the number is greater than couple tendency in int then person x does not want sex
+            chanceSex1 = false;
+        } else {
+            chanceSex1 = true;
+        }
+
+        if((int)(y.getCouplingTendency()*10) < (int)Math.round((Math.random() * 100)+1)) { //Random 1-100, if the number is greater than couple tendency in int then person y does not want sex
+            chanceSex2 = false;
+        } else {
+            chanceSex2 = true;
+        }
+
+        if(chanceSex1 && chanceSex2) {
+            if(x.getInfected() || y.getInfected()) {
+                x.setInfected(true);
+                y.setInfected(true);
+            }
+        }
+
+        checkCoupleLength(x,y);
+    }
+
+    public void checkCoupleLength(Person x, Person y) {
+        //Check couple length is not greater than commitment
+        if(x.getCoupleLength() <= x.getCommitment()) {
+            x.setCoupleLength(x.getCoupleLength() + 1);
+            y.setCoupleLength(y.getCoupleLength() + 1);
+        } else { //Couple breaks up if greater than commitment
+            x.setCouple(false);
+            y.setCouple(false);
+
+            x.setCoupleLength(0);
+            y.setCoupleLength(0);
+
+            x.setPartner(null);
+            y.setPartner(null);
+        }
+    }
+
+
+
+    public void nextPrint() {
+        this.results.append("---Week " + this.week + " ---\nGreen: " + green + "  Blue: " + blue + "  Red: " + red + "\n\n");
+    }
+
+    public static void main(String[] args)
+    {
+        HIVBoard b = new HIVBoard();
     }
 
 
