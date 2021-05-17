@@ -26,7 +26,7 @@ class Person {
     private double couplingTendency; // How likely the person is to join in a couple (percent)
     private double condomUse; // The chance a person uses protection (percent by 10%s)
     private double testFrequency; // Number of times a person will get tested per year (single digit)
-    private Person partner; // The person that is the partner in a couple
+    private int partner; // The person that is the partner in a couple
     private int biologicalSex; // 0 for male, 1 for female.
 
     /* Constructor that initializes Person's properties */
@@ -117,12 +117,16 @@ class Person {
         this.testFrequency = testFrequency;
     }
 
-    public Person getPartner() {
+    public int getPartner() {
         return this.partner;
     }
 
-    public void setPartner(Person partner) {
+    public void setPartner(int partner) {
         this.partner = partner;
+    }
+
+    public void updatePartner() {
+        this.partner -= 2;
     }
 
 }
@@ -140,8 +144,11 @@ public class HIVBoard extends JPanel implements ActionListener {
     int red;
     int green;
     int blue;
+    int counter;
+    boolean firstTwo;
 
     ArrayList<Person> population; // Contains the initial amount of people
+    ArrayList<Person> tempPop;
 
     JFrame frame = new JFrame("HIV Model in Java");
 
@@ -161,10 +168,16 @@ public class HIVBoard extends JPanel implements ActionListener {
         this.infectionChance = 0.5; // unprotected sex with an infected partner, you have a 50% chance of being
                                     // infected
         this.symptonsShow = 200; // symptoms show up 200 weeks after being infected
-        this.week = 0;
-        this.red = 0;
-        this.green = 0;
-        this.blue = 0;
+
+        population = new ArrayList<Person>();
+        tempPop = new ArrayList<Person>();
+
+        week = 0;
+        red = 0;
+        green = 0;
+        blue = 0;
+        counter = 0;
+        firstTwo = true;
         stopped = false;
         newSetup = true;
 
@@ -181,14 +194,14 @@ public class HIVBoard extends JPanel implements ActionListener {
         // this.panel2.setLayout(new GridLayout(5, 0));
 
         JSlider initialPopulationSlider = new JSlider(JSlider.HORIZONTAL, 0, 500, 300);
-        JSlider avgCouplingSlider = new JSlider(JSlider.HORIZONTAL, 0, 10, 5);
-        JSlider avgCommitmentSlider = new JSlider(JSlider.HORIZONTAL, 0, 200, 50);
+        JSlider avgCouplingSlider = new JSlider(JSlider.HORIZONTAL, 0, 10, 8);
+        JSlider avgCommitmentSlider = new JSlider(JSlider.HORIZONTAL, 0, 200, 10);
         JSlider avgCondomUseSilder = new JSlider(JSlider.HORIZONTAL, 0, 10, 0);
         JSlider avgTestFrequency = new JSlider(JSlider.HORIZONTAL, 0, 2, 0);
 
         JLabel label1 = new JLabel("Initial People: 300");
-        JLabel label2 = new JLabel("Average Coupling Tendency: 5 ");
-        JLabel label3 = new JLabel("Average Commitment: 50 ");
+        JLabel label2 = new JLabel("Average Coupling Tendency: 8 ");
+        JLabel label3 = new JLabel("Average Commitment: 10 ");
         JLabel label4 = new JLabel("Average Condom Use: 0");
         JLabel label5 = new JLabel("Average Test Frequency: 0");
 
@@ -254,7 +267,7 @@ public class HIVBoard extends JPanel implements ActionListener {
 
         buttonStep.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                next();
+                nexI();
             }
         });
 
@@ -334,13 +347,15 @@ public class HIVBoard extends JPanel implements ActionListener {
     }
 
     public void setup(int people, int coupling, int commitment, int condom, int testing) {
-        System.out.println("Inside setup method. Creating people");
+        //System.out.println("Inside setup method. Creating people");
         this.red = 0;
         this.green = 0;
         this.blue = 0;
         this.week = 0;
+        this.counter = 0;
+        this.firstTwo = true;
         createPeople(people, coupling, commitment, condom, testing);
-        System.out.println("Done creating people");
+        //System.out.println("Done creating people");
         setupPrint();
     }
 
@@ -350,33 +365,38 @@ public class HIVBoard extends JPanel implements ActionListener {
      * condomUse, int testFrequency)
      */
     public void createPeople(int people, int coupling, int commitment, int condom, int testing) {
-        System.out.println("Inside createPeople method");
+        //System.out.println("Inside createPeople method");
         int initialInfected = (int) ((double) people * 0.025); // 2.5% of the people start out infected, but does not
                                                                // know they are. Rounded down.
-        System.out.println("initial infected: " + initialInfected);
+        //System.out.println("initial infected: " + initialInfected);
         int counter = 0;
 
-        System.out.println((double) coupling * 0.01);
+        //System.out.println((double) coupling * 0.01);
 
         population = new ArrayList<Person>();
 
         for (int i = 0; i < people; i++) {
             if (counter <= initialInfected) {
-                population.add(new Person(true, false, (int) ((Math.random() * 100) + 1), false, 0, commitment,
-                        coupling, condom, testing, (int) Math.round(Math.random())));
+                population.add(new Person(true, false, (int)((Math.random() * 100) + 1), false, 0, commitment,
+                        coupling, condom, testing, (int)Math.round(Math.random())));
                 counter++;
             } else {
                 population.add(new Person(false, false, 0, false, 0, commitment, coupling, condom, testing,
-                        (int) Math.round(Math.random())));
+                        (int)Math.round(Math.random())));
+                counter++;
             }
-
+            tempPop.add(null);
         }
-        System.out.println("End of createPeople method");
+
+
+
+
+        //System.out.println("End of createPeople method");
     }
 
     public void setupPrint() {
         System.out.println("Inside, at the start setupPrint");
-        this.results.append("Green = Not Infected, Blue = Infected (Not Known), Red = Infected and Knows\n\n");
+        this.results.setText("Green = Not Infected, Blue = Infected (Not Known), Red = Infected and Knows\n\n");
 
         // calculate starting population state
         for (int i = 0; i < this.population.size(); i++) {
@@ -390,66 +410,63 @@ public class HIVBoard extends JPanel implements ActionListener {
         }
 
         this.results.append("---Week 0---\nGreen: " + green + "  Blue: " + blue + "  Red: " + red + "\n\n");
-        System.out.println("Inside, at the end of setupPrint");
+        //System.out.println("Inside, at the end of setupPrint");
     }
 
     public void next() {
-        System.out.println("Inside, at the start of next");
+        //System.out.println("Inside, at the start of next");
         this.week++;
-        ArrayList<Person> temp = new ArrayList<Person>();
+
         int max = 0;
         int min = 0;
         int range = 0;
 
-        System.out.println("Starting while loop");
+        //System.out.println("Starting while loop");
         while (population.size() != 0) {
-            System.out.println("\nInside the while loop start");
+            //System.out.println("\nInside the while loop start");
             max = this.population.size();
             range = max - min;
             int random1 = 0;
             int random2 = 0;
 
-            System.out.println("At the start of picking a random person. Range: " + range);
+            //System.out.println("At the start of picking a random person. Range: " + range);
             random1 = (int) Math.floor(Math.random() * range); // gets a number from 0 to population max - 1
-            System.out.println("Random1: " + random1);
-            System.out.println("About to put that random integer to find the person in the population array");
+            //System.out.println("Random1: " + random1);
+            //System.out.println("About to put that random integer to find the person in the population array");
             Person x = population.get(random1); // random person 1
 
-            System.out.println("About to find out if that random person 1 has a couple");
+            //System.out.println("About to find out if that random person 1 has a couple");
             // if random person 1 is in a relationship
-            if (x.getCouple() == true) {
-                Person y = x.getPartner();
+            if (x.getCouple()) {
+                //System.out.println("Person 1 is in a couple");
+                //System.out.println("Person 1 is in a couple with " + x.getPartner());
+                Person y = this.population.get(x.getPartner());
                 areTheyInHeat(x, y);
-                temp.add(x);
-                temp.add(y);
-                this.population.remove(random1);
-                if(random1 > random2) {
-                    this.population.remove(this.population.indexOf((this.population.get(random1).getPartner())));
-                }
-                else {
-                    this.population.remove(this.population.indexOf((this.population.get(random1).getPartner()))-1);
-                }
+                addToTemp(x, y);
+                removeFromList(random1, x.getPartner());
 
                 // If random person 1 is not in a relationship
             } else {
-                System.out.println("Person 1 is not in a relationship");
+               // System.out.println("Person 1 is not in a relationship");
 
                 // If there's more than 1 person left, find a second person
                 if (population.size() > 1) {
-                    System.out.println("Getting random number to get person 2");
+                    //System.out.println("Getting random number to get person 2");
                     while(random1 == random2) {
                         random2 = (int) Math.floor(Math.random() * range);
                     }
-                    System.out.println("Random2: " + random2);
+                    //System.out.println("Random2: " + random2);
                     Person m = population.get(random2);
 
                     boolean chanceCouple1 = false; // default false for random person 1
                     boolean chanceCouple2 = false; // default false for random person 2
                     if (m.getCouple() == false) { // if random person 2 is not in a couple
-                        System.out.println("Person 2 is not in a couple");
+                        //System.out.println("Person 2 is not in a couple");
                         // Random 1-100, if the number is greater than couple tendency in int then no
                         // couple
-                        if ((int) (x.getCouplingTendency() * 10) < (int) Math.floor((Math.random() * 100) + 1)) {
+                        //System.out.println("Coupling Tendency:  " + m.getCouplingTendency());
+                        //System.out.println("Chance of cooupling " + (m.getCouplingTendency() * 100));
+                        if ((int) (x.getCouplingTendency() * 100) < (int) Math.floor((Math.random() * 100) + 1)) {
                             chanceCouple1 = false;
                         } else {
                             chanceCouple1 = true;
@@ -457,107 +474,82 @@ public class HIVBoard extends JPanel implements ActionListener {
 
                         // Random 1-100, if the number is greater than couple tendency in int then no
                         // couple
-                        if ((int) (m.getCouplingTendency() * 10) < (int) Math.floor((Math.random() * 100) + 1)) {
+                        
+                        if ((int) (m.getCouplingTendency() * 100) < (int) Math.floor((Math.random() * 100) + 1)) {
                             chanceCouple2 = false;
                         } else {
                             chanceCouple2 = true;
                         }
 
                         // They become a couple and start their couple length
-                        System.out.println("Do both person want to become a couple?");
+                        //System.out.println("Do both person want to become a couple?");
                         if (chanceCouple1 && chanceCouple2) {
                             x.setCouple(true); // now a couple
                             m.setCouple(true);
-                            System.out.println("Person 1 and Person 2 are now a couple");
+                            x.setPartner(random1);
+                            m.setPartner(random2);
+                            //System.out.println("Person 1 and Person 2 are now a couple");
                             x.setCoupleLength(0); // starting couple commitment to 0 week
                             m.setCoupleLength(0);
-                            System.out.println("Set Couple length to 0 for new relationships");
-                            System.out.println("Check if they are in heat");
+                            //System.out.println("Set Couple length to 0 for new relationships");
+                            //System.out.println("Check if they are in heat");
                             areTheyInHeat(x, m);
-                            temp.add(x);
-                            temp.add(m);
-                            this.population.remove(random1);
-                            if(random1 > random2) {
-                                this.population.remove(random2);
-                            }
-                            else {
-                                this.population.remove(random2-1);
-                            }
+                            addToTemp(x, m);
+                            removeFromList(random1, random2);
                         } else {
-                            System.out.println("They don't want to be in a relationship");
-                            System.out.println("Adding person 1 and person 2 to the temporary arrayList");
-                            temp.add(x);
-                            temp.add(m);
-                            System.out.println("Remove random person 1 and person 2 from the original population arraylist");
-                            this.population.remove(random1);
-                            if(random1 > random2) {
-                                this.population.remove(random2);
-                            }
-                            else {
-                                this.population.remove(random2-1);
-                            }
-                            System.out.println("Person 1 and person 2 removed from the original population arraylist");
+                            //System.out.println("They don't want to be in a relationship");
+                            //System.out.println("Adding person 1 and person 2 to the temporary arrayList");
+                            addToTemp(x, m);
+                            //System.out.println("Remove random person 1 and person 2 from the original population arraylist");
+                            removeFromList(random1, random2);
+                            //System.out.println("Person 1 and person 2 removed from the original population arraylist");
                         }
                     } else {
-                        System.out.println("Random person 2 has a couple");
-                        temp.add(x);
-                        temp.add(m);
-                        this.population.remove(random1);
-                        if(random1 > random2) {
-                            this.population.remove(random2);
-                        }
-                        else {
-                            this.population.remove(random2-1);
-                        }
+                        //System.out.println("Random person 2 has a couple");
+                        addToTemp(x, m);
+                        removeFromList(random1, random2);
                     }
 
                     // If random person 1 is the only one left
                 } else {
-                    temp.add(x);
+                    tempPop.add(x);
                     this.population.remove(random1);
                 }
             }
 
-            System.out.println("About to remove 1 from max, Current max: " + max);
+            //System.out.println("About to remove 1 from max, Current max: " + max);
             max--;
-            System.out.println("After removing 1 from max, Current max: " + max);
+            //System.out.println("After removing 1 from max, Current max: " + max);
         }
 
-
-        /*Repopulate original population list from temp list and remove from temp list*/
-        for(int i = 0; i < temp.size(); i++) {
-            population.add(temp.get(i));
-            temp.remove(i);
-        }
-
+        refillPop();
         nextPrint();
-        System.out.println("Inside, at the end of next");
+        //System.out.println("Inside, at the end of next");
     }
 
     public void areTheyInHeat(Person x, Person y) {
-        System.out.println("Inside, at the start of areTheyInHeat");
+        //System.out.println("Inside, at the start of areTheyInHeat");
         boolean chanceSex1 = false; // default false for random person 1
         boolean chanceSex2 = false; // default false for random person 2
 
-        if ((int) (x.getCouplingTendency() * 10) < (int) Math.floor((Math.random() * 100) + 1)) { // Random 1-100, if the number is greater than couple
+        //System.out.println("Getting person 1 coupling tendency if person 1 wants to do it");
+        if ((int)(x.getCouplingTendency() * 100) < (int)Math.floor((Math.random() * 100) + 1)) { // Random 1-100, if the number is greater than couple
                                                                                                   // tendency in int then person x does not want sex
             chanceSex1 = false;
         } else {
             chanceSex1 = true;
         }
 
-        if ((int) (y.getCouplingTendency() * 10) < (int) Math.floor((Math.random() * 100) + 1)) { // Random 1-100, if
-                                                                                                  // the number is
-                                                                                                  // greater than couple
-                                                                                                  // tendency in int
-                                                                                                  // then person y does
-                                                                                                  // not want sex
+        //System.out.println("Getting person 2 coupling tendency if person 2 wants to do it");
+        if ((int)(y.getCouplingTendency() * 100) < (int)Math.floor((Math.random() * 100) + 1)) { // Random 1-100, if the number is greater than couple
+                                                                                                  // tendency in int then person y does not want sex
             chanceSex2 = false;
         } else {
             chanceSex2 = true;
         }
 
-        System.out.println("Having sex! Person 1 is " + x.getInfected() + ", Person 2 is " + y.getInfected());
+        //System.out.println("Person 1 said " + chanceSex1 + " and Person 2 said " + chanceSex2);
+        //System.out.println("Person 1 is " + x.getInfected() + ", Person 2 is " + y.getInfected());
         if (chanceSex1 && chanceSex2) {
             if (x.getInfected() || y.getInfected()) {
                 if(!x.getInfected()) {
@@ -574,11 +566,11 @@ public class HIVBoard extends JPanel implements ActionListener {
         }
 
         checkCoupleLength(x, y);
-        System.out.println("Inside, at the end of areTheyInHeat");
+        //System.out.println("Inside, at the end of areTheyInHeat");
     }
 
     public void checkCoupleLength(Person x, Person y) {
-        System.out.println("Inside, at the start of checkCoupleLength");
+        //System.out.println("Inside, at the start of checkCoupleLength");
         // Check couple length is not greater than commitment
         if (x.getCoupleLength() <= x.getCommitment()) {
             x.setCoupleLength(x.getCoupleLength() + 1);
@@ -590,17 +582,123 @@ public class HIVBoard extends JPanel implements ActionListener {
             x.setCoupleLength(0);
             y.setCoupleLength(0);
 
-            x.setPartner(null);
-            y.setPartner(null);
+            x.setPartner(-1);
+            y.setPartner(-1);
         }
-        System.out.println("Inside, at the endof checkCoupleLength");
+        //System.out.println("Inside, at the end of checkCoupleLength");
+    }
+
+    public void removeFromList(int random1, int random2) {
+        //System.out.println("Inside, at the start of removeFromList");
+        if(random1 > random2) {
+            //System.out.println("Removing Person 1 First");
+            this.population.remove(random1);
+            //System.out.println("Removing Person 2 Second");
+            this.population.remove(random2);
+            //System.out.println("Updating partner variable");
+            reupdatePartner(random2);
+        }
+        else {
+            //System.out.println("Removing Person 2 First");
+            this.population.remove(random2);
+            //System.out.println("Removing Person 1 Second");
+            this.population.remove(random1);
+            //System.out.println("Updating partner variable");
+            reupdatePartner(random1);
+        }
+        
+        //System.out.println("Inside, at the end of removeFromList");
+    }
+
+    public void reupdatePartner(int x) {
+        //System.out.println("Inside, at the start of reupdatePartner");
+        for(int i = 0; i < this.population.size(); i++) {
+            //System.out.println("Does person in a relationship");
+            if(this.population.get(i).getCouple()) {
+                //System.out.println("Does person's partner index greater than person index");
+                if(this.population.get(i).getPartner() >= x) {
+                    this.population.get(i).updatePartner();
+                }
+            }
+        }
+        //System.out.println("Inside, at the end of reupdatePartner");
+    }
+
+    public void addToTemp(Person x, Person y) {
+        //System.out.println("Inside, at the start of addToTemp");
+        if(firstTwo) {
+            //System.out.println("Adding to Temp FirstTwo");
+            if(x.getCouple()) {
+                x.setPartner(1);
+                y.setPartner(0);
+            }
+            this.tempPop.add(x);
+            this.tempPop.add(y);
+            this.firstTwo = false;
+        } else {
+            if(x.getCouple()) {
+                //System.out.println("Resetting partners");
+                x.setPartner(this.population.indexOf(y));
+                y.setPartner(this.population.indexOf(x));
+                //System.out.println("Adding to Temp NOT FirstTwo");
+                this.tempPop.set(this.population.indexOf(x), x);
+                this.tempPop.set(this.population.indexOf(y), y);
+            } else {
+                //System.out.println("Adding to Temp NOT FirstTwo Not Couple");
+                this.tempPop.set(this.population.indexOf(x), x);
+                this.tempPop.set(this.population.indexOf(y), y);
+            }
+        }
+        //System.out.println("Inside, at the end of addToTemp");
+    }
+
+    public void refillPop() {
+        //System.out.println("Inside, at the start of refillPop");
+        /*Repopulate original population list from temp list and remove from temp list*/
+        for(int i = 0; i < this.tempPop.size(); i++) {
+           this.population.add(tempPop.get(i));
+        }
+        for(int i = 0; i < this.tempPop.size(); i++) {
+            tempPop.set(i, null);
+        }
+        //System.out.println("Inside, at the end of refillPop");
     }
 
     public void nextPrint() {
-        System.out.println("Inside, at the start of nextPrint");
-        this.results.append(
-                "---Week " + this.week + " ---\nGreen: " + green + "  Blue: " + blue + "  Red: " + red + "\n\n");
-        System.out.println("Inside, at the end of nextPrint");
+        //System.out.println("Inside, at the start of nextPrint");
+        this.results.append("---Week " + this.week + " ---\nGreen: " + green + "  Blue: " + blue + "  Red: " + red + "\n\n");
+        //System.out.println("Inside, at the end of nextPrint");
+    }
+
+    public void nexI(){
+        this.week++;
+        if(this.counter != 0) {
+            this.counter -= 1;
+        }
+
+        int random1 = (int)Math.floor((Math.random()*100)+1);
+        int generateNumber = (int)((Math.random()*this.blue)/3);
+        int coupling = (int)((this.population.get(0).getCouplingTendency()*100)/2);
+
+        //System.out.println("Coupling = " + coupling + ", random1 = " + random1 + ", generate = " + generateNumber + ", counter = " + this.counter);
+
+        if(random1 <= coupling && counter == 0) {
+            if(this.green != 0) {
+                int temp = this.green - generateNumber;
+                if(temp < 0) {
+                    this.blue += this.green;
+                    this.green = 0;
+                } else {
+                    this.green -= generateNumber;
+                    this.blue += generateNumber;
+                    counter = (int)(this.population.get(0).getCommitment()/3);
+                }
+            }else {
+                this.results.append("Can't Go no more! MAXED HIV Infected! No one left that is not infected!\n");
+            }
+        }
+
+        this.results.append("---Week " + this.week + " ---\nGreen: " + this.green + "  Blue: " + this.blue + "  Red: " + this.red + "\n\n");
     }
 
     public static void main(String[] args) {
